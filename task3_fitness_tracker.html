@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fitness Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --card: #181818;
+      --border: #2a2a2a;
+      --green: #39ff14;
+      --green-dim: rgba(57,255,20,0.12);
+      --green-mid: rgba(57,255,20,0.4);
+      --text: #f0f0f0;
+      --muted: #666;
+      --red: #ff4444;
+      --orange: #ff8c00;
+      --blue: #00bfff;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* Scanline effect */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      animation: fadeDown 0.6s ease;
+    }
+
+    .header-left .tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.3rem;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.5rem;
+      line-height: 1;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+
+    .date-badge {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.6;
+    }
+    .date-badge span { color: var(--green); font-weight: 600; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.orange::before { background: var(--orange); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-card.red::before { background: var(--red); }
+
+    .stat-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      line-height: 1;
+      color: var(--text);
+    }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.orange .stat-value { color: var(--orange); }
+    .stat-card.blue .stat-value { color: var(--blue); }
+    .stat-card.red .stat-value { color: var(--red); }
+
+    .stat-unit { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Progress bar */
+    .progress-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .progress-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .progress-pct {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      color: var(--green);
+    }
+
+    .progress-bars { display: flex; flex-direction: column; gap: 0.9rem; }
+
+    .bar-item { }
+    .bar-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+    .bar-info span:last-child { color: var(--muted); font-size: 0.72rem; }
+
+    .bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* Main layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 650px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* Log Form */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .panel-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .panel-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px; height: 18px;
+      background: var(--green);
+      border-radius: 2px;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      padding: 0.65rem 0.9rem;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--green);
+    }
+    .form-group select option { background: var(--surface); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--green);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      padding: 0.8rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: all 0.2s;
+    }
+    .submit-btn:hover { background: #55ff33; transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(1px); }
+
+    /* Activity Log */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 0.3rem;
+    }
+
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-track { background: var(--border); border-radius: 2px; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--green-mid); border-radius: 2px; }
+
+    .log-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--green);
+      border-radius: 6px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: slideIn 0.3s ease;
+    }
+
+    .log-item.running { border-left-color: var(--orange); }
+    .log-item.cycling { border-left-color: var(--blue); }
+    .log-item.swimming { border-left-color: #00e5ff; }
+    .log-item.yoga { border-left-color: #ff69b4; }
+    .log-item.strength { border-left-color: var(--red); }
+
+    .log-info .log-type {
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: capitalize;
+    }
+    .log-info .log-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .log-stats { text-align: right; }
+    .log-stats .log-cal {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      color: var(--orange);
+    }
+    .log-stats .log-time {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .log-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.4rem;
+      margin-left: 0.5rem;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .log-delete:hover { color: var(--red); background: rgba(255,68,68,0.1); }
+
+    .empty-log {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* Weekly chart */
+    .chart-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+      height: 120px;
+      margin-top: 1.2rem;
+    }
+
+    .chart-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .chart-bar-wrap {
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .chart-bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      background: var(--green-dim);
+      border: 1px solid var(--green-mid);
+      transition: height 1s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+      cursor: pointer;
+    }
+    .chart-bar.today { background: var(--green); border-color: var(--green); }
+    .chart-bar:hover { opacity: 0.8; }
+
+    .chart-day {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .chart-col.today .chart-day { color: var(--green); }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-left">
+      <p class="tag">⚡ Daily Dashboard</p>
+      <h1>Fitness Tracker</h1>
+    </div>
+    <div class="date-badge" id="dateBadge"></div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card green" style="animation-delay:0s">
+      <p class="stat-label">Steps</p>
+      <p class="stat-value" id="statSteps">0</p>
+      <p class="stat-unit">Goal: 10,000</p>
+    </div>
+    <div class="stat-card orange" style="animation-delay:0.05s">
+      <p class="stat-label">Calories</p>
+      <p class="stat-value" id="statCals">0</p>
+      <p class="stat-unit">kcal burned</p>
+    </div>
+    <div class="stat-card blue" style="animation-delay:0.1s">
+      <p class="stat-label">Workouts</p>
+      <p class="stat-value" id="statWorkouts">0</p>
+      <p class="stat-unit">today</p>
+    </div>
+    <div class="stat-card red" style="animation-delay:0.15s">
+      <p class="stat-label">Minutes</p>
+      <p class="stat-value" id="statMins">0</p>
+      <p class="stat-unit">active time</p>
+    </div>
+  </div>
+
+  <!-- Progress Bars -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <p class="progress-title">Daily Goals Progress</p>
+      <p class="progress-pct" id="overallPct">0%</p>
+    </div>
+    <div class="progress-bars">
+      <div class="bar-item">
+        <div class="bar-info"><span>Steps</span><span id="stepsLabel">0 / 10,000</span></div>
+        <div class="bar-track"><div class="bar-fill" id="stepsBar" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-info"><span>Calories</span><span id="calsLabel">0 / 500 kcal</span></div>
+        <div class="bar-track"><div class="bar-fill" id="calsBar" style="width:0%;background:var(--orange)"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-info"><span>Active Time</span><span id="minsLabel">0 / 60 min</span></div>
+        <div class="bar-track"><div class="bar-fill" id="minsBar" style="width:0%;background:var(--blue)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log + Form -->
+  <div class="main-grid">
+
+    <!-- Form -->
+    <div class="panel">
+      <p class="panel-title">Log Activity</p>
+      <div class="form-group">
+        <label>Exercise Type</label>
+        <select id="exType">
+          <option value="walking">🚶 Walking</option>
+          <option value="running">🏃 Running</option>
+          <option value="cycling">🚴 Cycling</option>
+          <option value="swimming">🏊 Swimming</option>
+          <option value="strength">🏋️ Strength Training</option>
+          <option value="yoga">🧘 Yoga</option>
+          <option value="hiit">⚡ HIIT</option>
+          <option value="other">💪 Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Duration (min)</label>
+          <input type="number" id="exDuration" placeholder="30" min="1" max="300"/>
+        </div>
+        <div class="form-group">
+          <label>Calories (kcal)</label>
+          <input type="number" id="exCals" placeholder="200" min="1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Steps (optional)</label>
+        <input type="number" id="exSteps" placeholder="e.g. 3000" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <input type="text" id="exNotes" placeholder="e.g. Morning jog in the park"/>
+      </div>
+      <button class="submit-btn" onclick="logActivity()">+ LOG ACTIVITY</button>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="panel">
+      <p class="panel-title">Today's Log</p>
+      <div class="log-list" id="logList">
+        <div class="empty-log">No activities logged yet.<br/>Add your first workout! 💪</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly Chart -->
+  <div class="chart-section">
+    <p class="panel-title">Weekly Calories</p>
+    <div class="chart-bars" id="chartBars"></div>
+  </div>
+
+</div>
+
+<script>
+  // State
+  let activities = JSON.parse(localStorage.getItem('ft_activities') || '[]');
+  let weeklyData = JSON.parse(localStorage.getItem('ft_weekly') || 'null') || generateWeekly();
+
+  function generateWeekly() {
+    return [180, 320, 250, 410, 290, 0, 0]; // Mon–Sun sample
+  }
+
+  const days = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
+
+  // Date display
+  const now = new Date();
+  document.getElementById('dateBadge').innerHTML =
+    `<span>${now.toLocaleDateString('en-US',{weekday:'long'})}</span><br>
+     ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
+
+  function saveData() {
+    localStorage.setItem('ft_activities', JSON.stringify(activities));
+    localStorage.setItem('ft_weekly', JSON.stringify(weeklyData));
+  }
+
+  function logActivity() {
+    const type = document.getElementById('exType').value;
+    const duration = parseInt(document.getElementById('exDuration').value);
+    const cals = parseInt(document.getElementById('exCals').value);
+    const steps = parseInt(document.getElementById('exSteps').value) || 0;
+    const notes = document.getElementById('exNotes').value.trim();
+
+    if (!duration || !cals) { alert('Please enter duration and calories!'); return; }
+
+    const activity = {
+      id: Date.now(),
+      type, duration, cals, steps, notes,
+      time: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+    };
+
+    activities.unshift(activity);
+    weeklyData[todayIdx] = (weeklyData[todayIdx] || 0) + cals;
+    saveData();
+    render();
+
+    // Reset form
+    document.getElementById('exDuration').value = '';
+    document.getElementById('exCals').value = '';
+    document.getElementById('exSteps').value = '';
+    document.getElementById('exNotes').value = '';
+  }
+
+  function deleteActivity(id) {
+    const idx = activities.findIndex(a => a.id === id);
+    if (idx === -1) return;
+    weeklyData[todayIdx] = Math.max(0, (weeklyData[todayIdx] || 0) - activities[idx].cals);
+    activities.splice(idx, 1);
+    saveData();
+    render();
+  }
+
+  function render() {
+    // Totals
+    const totalCals = activities.reduce((s,a) => s + a.cals, 0);
+    const totalSteps = activities.reduce((s,a) => s + a.steps, 0);
+    const totalMins = activities.reduce((s,a) => s + a.duration, 0);
+
+    document.getElementById('statSteps').textContent = totalSteps.toLocaleString();
+    document.getElementById('statCals').textContent = totalCals.toLocaleString();
+    document.getElementById('statWorkouts').textContent = activities.length;
+    document.getElementById('statMins').textContent = totalMins;
+
+    // Progress bars
+    const stepsPct = Math.min(100, (totalSteps / 10000) * 100);
+    const calsPct = Math.min(100, (totalCals / 500) * 100);
+    const minsPct = Math.min(100, (totalMins / 60) * 100);
+    const overall = Math.round((stepsPct + calsPct + minsPct) / 3);
+
+    document.getElementById('stepsBar').style.width = stepsPct + '%';
+    document.getElementById('calsBar').style.width = calsPct + '%';
+    document.getElementById('minsBar').style.width = minsPct + '%';
+    document.getElementById('stepsLabel').textContent = totalSteps.toLocaleString() + ' / 10,000';
+    document.getElementById('calsLabel').textContent = totalCals + ' / 500 kcal';
+    document.getElementById('minsLabel').textContent = totalMins + ' / 60 min';
+    document.getElementById('overallPct').textContent = overall + '%';
+
+    // Log list
+    const list = document.getElementById('logList');
+    if (activities.length === 0) {
+      list.innerHTML = '<div class="empty-log">No activities logged yet.<br/>Add your first workout! 💪</div>';
+    } else {
+      list.innerHTML = activities.map(a => `
+        <div class="log-item ${a.type}">
+          <div class="log-info">
+            <div class="log-type">${a.type}</div>
+            <div class="log-meta">${a.duration} min${a.steps ? ' · ' + a.steps.toLocaleString() + ' steps' : ''}${a.notes ? ' · ' + a.notes : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.3rem">
+            <div class="log-stats">
+              <div class="log-cal">${a.cals} kcal</div>
+              <div class="log-time">${a.time}</div>
+            </div>
+            <button class="log-delete" onclick="deleteActivity(${a.id})">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Weekly chart
+    const maxVal = Math.max(...weeklyData, 100);
+    const chartBars = document.getElementById('chartBars');
+    chartBars.innerHTML = days.map((day, i) => {
+      const val = weeklyData[i] || 0;
+      const h = Math.max(4, (val / maxVal) * 100);
+      const isToday = i === todayIdx;
+      return `
+        <div class="chart-col ${isToday ? 'today' : ''}">
+          <div class="chart-bar-wrap">
+            <div class="chart-bar ${isToday ? 'today' : ''}" style="height:${h}%" title="${val} kcal"></div>
+          </div>
+          <span class="chart-day">${day}</span>
+        </div>`;
+    }).join('');
+  }
+
+  render();
+</script>
+</body>
+</html>
