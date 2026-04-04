@@ -100,11 +100,11 @@ task3-fitness-tracker/
    ```
    > No installations needed — all projects run directly in the browser.
 
----
 
-## 👤 Author
 
-**Your Name**  
+
+
+KHADIJA AFTAB
 Intern @ Code Alpha  
 [GitHub](https://github.com/your-username) • [LinkedIn](https://linkedin.com/in/your-profile)
 
